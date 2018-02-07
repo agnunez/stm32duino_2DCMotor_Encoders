@@ -13,6 +13,7 @@ int state2=0;
 void setup() {
   Serial1.begin(115200);
   Serial1.println("Serial1 START");
+  disableDebugPorts(); // To access to PB3 that is used as SWO in JTAG
   pinMode(pinLED, OUTPUT);
   pinMode(PB0, INPUT_PULLUP);  // Enc A Motor 1  
   pinMode(PB1, INPUT_PULLUP);  // Enc B Motor 1
