@@ -6,21 +6,20 @@
 #define pinLED PC13
 
 int enc[]={0,-1,1,0,1,0,0,-1,-1,0,0,1,0,1,-1,0};  // Quadrature Encoder machine state array
-int pos0=0;
-int pos1=0;
 int state0=0;
 int state1=0;
-double In0,In1,Out0,Out1,Set0=30,Set1=30;   // PID Input Signal, Output command and Setting speed for each wheel 
-double kp0=0.5,ki0=10,kd0=0.0;              // Left/right wheel PID constants. Can be modiffied while running with:
-double kp1=0.5,ki1=10,kd1=0.0;              // s nnn (setting point), p nnn (kp), i nnn (ki), d nnn (kd). nnn is divided by 10 to get decimals nnn -> nn.n
-int period=50;                              // PID sample timer period in ms
-double kt=1000/period;                      // number of periods/sec
-int t0,t1=0;
-bool debug=false;
+double pos0,pos1,t0,t1,Out0,Out1;   // PID Input Signal, Output command and Setting speed for each wheel 
+double kp0=100,ki0=10,kd0=0.0;               // motors PID constants. Can be modiffied while running with:
+double kp1=100,ki1=10,kd1=0.0;               // s nnn (setting point), p nnn (kp), i nnn (ki), d nnn (kd). nnn is divided by 10 to get decimals nnn -> nn.n
+int period=1;                              // PID sample timer period in ms
+int debug=0;
+int toggle=0;
 
 //PID(&Input, &Output, &Setpoint, Kp, Ki, Kd, Direction)
-PID lPID(&In0, &Out0, &Set0, kp0, ki0, kd0, DIRECT);
-PID rPID(&In1, &Out1, &Set1, kp1, ki1, kd1, DIRECT);
+//PID PID0(&In0, &Out0, &Set0, kp0, ki0, kd0, DIRECT);
+//PID PID1(&In1, &Out1, &Set1, kp1, ki1, kd1, DIRECT);
+PID PID0(&pos0, &Out0, &t0, kp0, ki0, kd0, DIRECT);
+PID PID1(&pos1, &Out1, &t1, kp1, ki1, kd1, DIRECT);
 
 static inline int8_t sgn(int val) {
  if (val < 0) return -1;
@@ -55,22 +54,20 @@ void setup() {
   Timer4.attachCompare1Interrupt(tick);
   motion(0,0);
   motion(1,0);
- 
+  PID0.SetSampleTime(period);
+  PID1.SetSampleTime(period);
+  PID0.SetOutputLimits(-255,255);
+  PID1.SetOutputLimits(-255,255);
+  PID0.SetMode(AUTOMATIC);
+  PID1.SetMode(AUTOMATIC); 
 }
 void tick(){
-  int d0=t0-pos0;
-  int d1=t1-pos1;
-  if(abs(d0)>10){
-    motion(0,-200*sgn(d0));
-  }else{
-    motion(0,0);
-  }
-  if(abs(d1)>10){
-    motion(1,200*sgn(d1));
-  }else{
-    motion(1,0);
-  }
+  PID0.Compute();
+  PID1.Compute();
+  motion(0,-Out0);
+  motion(1,Out1);
 }
+
 void encoder1(){
   state0 = (state0<<2) | (GPIOB->regs->IDR & B11);
   pos0 += enc[state0];
@@ -82,7 +79,7 @@ void encoder2(){
   state1 &= B11;
 } 
 
-void motion(int motor, int vel){
+void motion(int motor, float vel){
   if(motor==1){
     if(vel>0){
       analogWrite(PA0,0);
@@ -113,25 +110,82 @@ void motion(int motor, int vel){
   }
 }
 
-
-void log(){
-  Serial1.print("t0:");
+void dump(){
+  Serial1.print("kp0:");
+  Serial1.print(kp0);
+  Serial1.print(" ki0:");
+  Serial1.print(ki0);
+  Serial1.print(" kd0:");
+  Serial1.print(kd0);
+  Serial1.print(" t0:");
   Serial1.print(t0);
   Serial1.print(" t1:");
   Serial1.print(t1);
-  Serial1.print(" pos0:");
+  Serial1.print(" pos:");
   Serial1.print(pos0);
   Serial1.print(" pos1:");
-  Serial1.println(pos1);
-  if(debug)Serial1.print(GPIOB->regs->IDR,BIN);
+  Serial1.print(pos1);    
+  Serial1.print(" Out0:");
+  Serial1.print(Out0);    
+  Serial1.print(" Out1:");
+  Serial1.println(Out1);    
 }
 
-void loop() {
+char c=0;             // input char from keys
+void loop(){
+  // watch for input
+  if(c==0){
+    if (Serial1.available() != 0) {
+      c = Serial1.read();
+      Serial1.println(c);
+    }
+  } else {
+    if (Serial1.available() != 0) {
+      int gv = Serial1.parseInt();
+      if(c=='0'){
+        t0=gv/10.;
+      } else if(c=='1'){
+        t1=gv/10.;
+      } else if(c=='p'){
+        kp0=gv/10.;
+        kp1=gv/10.;
+        PID0.SetTunings(kp0, ki0, kd0);
+        PID1.SetTunings(kp1, ki1, kd1);
+      } else if(c=='i'){
+        ki0=gv/10.;
+        ki1=gv/10.;
+        PID0.SetTunings(kp0, ki0, kd0);
+        PID1.SetTunings(kp1, ki1, kd1);
+      } else if(c=='d'){
+        kd0=gv/10.;
+        kd1=gv/10.;
+        PID0.SetTunings(kp0, ki0, kd0);
+        PID1.SetTunings(kp1, ki1, kd1);
+      } else if(c=='s'){
+        dump();
+      } else if(c=='b'){
+        debug^=1;
+      } else {
+        Serial1.println("Tunning command not recognized. Use 0 NNN, 1 NNN, p NNN, i NNN, d NNN with NNN=n*10, s to dump variables, b to toggle debug");
+      }
+      while (Serial1.available()) Serial1.read();
+      c=0;
+    }
+  }
+  if(debug){
+    dump();
+  }
+  toggle^=1;
+  digitalWrite(pinLED, toggle);
+  delay(1000);
+}
+  /*
     digitalWrite(pinLED, HIGH);
     t0=40000;
     log();
     delay(1000);
     digitalWrite(pinLED, LOW);
     t1=30000;
-    delay(1000);    
-}
+    delay(1000);
+    */    
+
