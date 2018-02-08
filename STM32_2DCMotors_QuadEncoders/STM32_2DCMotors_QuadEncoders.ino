@@ -8,10 +8,10 @@
 int enc[]={0,-1,1,0,1,0,0,-1,-1,0,0,1,0,1,-1,0};  // Quadrature Encoder machine state array
 int state0=0;
 int state1=0;
-double pos0,pos1,t0,t1,Out0,Out1;   // PID Input Signal, Output command and Setting speed for each wheel 
-double kp0=100,ki0=10,kd0=0.0;               // motors PID constants. Can be modiffied while running with:
-double kp1=100,ki1=10,kd1=0.0;               // s nnn (setting point), p nnn (kp), i nnn (ki), d nnn (kd). nnn is divided by 10 to get decimals nnn -> nn.n
-int period=1;                              // PID sample timer period in ms
+double pos0,pos1,t0,t1,Out0,Out1;         // PID Input Signal, Output command and Setting speed for each wheel 
+double kp0=40,ki0=10,kd0=1.0;             // motors PID constants. Can be modiffied while running with:
+double kp1=40,ki1=10,kd1=1.0;             // s nnn (setting point), p nnn (kp), i nnn (ki), d nnn (kd). nnn is divided by 10 to get decimals nnn -> nn.n
+int period=1;                             // PID sample timer period in ms
 int debug=0;
 int toggle=0;
 
@@ -64,7 +64,7 @@ void setup() {
 void tick(){
   PID0.Compute();
   PID1.Compute();
-  motion(0,-Out0);
+  motion(0,Out0);
   motion(1,Out1);
 }
 
@@ -82,12 +82,12 @@ void encoder2(){
 void motion(int motor, float vel){
   if(motor==1){
     if(vel>0){
-      analogWrite(PA0,0);
-      analogWrite(PA1,vel);
+      analogWrite(PA0,vel);
+      analogWrite(PA1,0);
     }
     if(vel<0){
-      analogWrite(PA0,-vel);
-      analogWrite(PA1,0);
+      analogWrite(PA0,0);
+      analogWrite(PA1,-vel);
     }
     if(vel==0){
       analogWrite(PA0,0);
@@ -96,12 +96,12 @@ void motion(int motor, float vel){
   }
   if(motor==0){
     if(vel>0){
-      analogWrite(PA2,0);
-      analogWrite(PA3,vel);
+      analogWrite(PA2,vel);
+      analogWrite(PA3,0);
     }
     if(vel<0){
-      analogWrite(PA2,-vel);
-      analogWrite(PA3,0);
+      analogWrite(PA2,0);
+      analogWrite(PA3,-vel);
     }
     if(vel==0){
       analogWrite(PA2,0);
