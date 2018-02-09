@@ -111,24 +111,9 @@ void motion(int motor, float vel){
 }
 
 void dump(){
-  Serial1.print("kp0:");
-  Serial1.print(kp0);
-  Serial1.print(" ki0:");
-  Serial1.print(ki0);
-  Serial1.print(" kd0:");
-  Serial1.print(kd0);
-  Serial1.print(" t0:");
-  Serial1.print(t0);
-  Serial1.print(" t1:");
-  Serial1.print(t1);
-  Serial1.print(" pos:");
-  Serial1.print(pos0);
-  Serial1.print(" pos1:");
-  Serial1.print(pos1);    
-  Serial1.print(" Out0:");
-  Serial1.print(Out0);    
-  Serial1.print(" Out1:");
-  Serial1.println(Out1);    
+        Serial1.print(int(pos0));
+        Serial1.print(":");
+        Serial1.println(int(pos1));
 }
 
 char c=0;             // input char from keys
@@ -143,9 +128,9 @@ void loop(){
     if (Serial1.available() != 0) {
       int gv = Serial1.parseInt();
       if(c=='0'){
-        t0=gv/10.;
+        t0=gv;
       } else if(c=='1'){
-        t1=gv/10.;
+        t1=gv;
       } else if(c=='p'){
         kp0=gv/10.;
         kp1=gv/10.;
@@ -161,16 +146,12 @@ void loop(){
         kd1=gv/10.;
         PID0.SetTunings(kp0, ki0, kd0);
         PID1.SetTunings(kp1, ki1, kd1);
-      } else if(c=='?'){
-        Serial1.print(int(pos0));
-        Serial1.print(":");
-        Serial1.println(int(pos1));
       } else if(c=='s'){
         dump();
       } else if(c=='b'){
         debug^=1;
       } else {
-        Serial1.println("Command not recognized. Use:\n '0 NNN' or '1 NNN', for target position,\n '?' for current position.\n 'p' NNN, 'i' NNN, 'd' NNN with NNN=n*10,\n 's' to dump variables, 'b' to toggle debug");
+        Serial1.println("Command not recognized. Use:\n '0 pos' or '1 pos', for target position,\n, 'p' NNN, 'i' NNN, 'd' NNN with NNN=n*10,\n 's' to dump variables, 'b' to toggle debug");
       }
       while (Serial1.available()) Serial1.read();
       c=0;
